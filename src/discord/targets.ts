@@ -8,10 +8,12 @@ import {
 } from "../channels/targets.js";
 
 import type { DirectoryConfigParams } from "../channels/plugins/directory-config.js";
+<<<<<<< HEAD
 import type { ChannelDirectoryEntry } from "../channels/plugins/types.core.js";
+=======
+>>>>>>> 9688454a30e618e878ca795fbe46da58b2e2e9d3
 
 import { listDiscordDirectoryPeersLive } from "./directory-live.js";
-import { resolveDiscordAccount } from "./accounts.js";
 
 export type DiscordTargetKind = MessagingTargetKind;
 
@@ -73,19 +75,31 @@ export function resolveDiscordChannelId(raw: string): string {
  *
  * @param raw - The username or raw target string (e.g., "john.doe")
  * @param options - Directory configuration params (cfg, accountId, limit)
+ * @param parseOptions - Messaging target parsing options (defaults, ambiguity message)
  * @returns Parsed MessagingTarget with user ID, or undefined if not found
  */
 export async function resolveDiscordTarget(
   raw: string,
   options: DirectoryConfigParams,
+  parseOptions: DiscordTargetParseOptions = {},
 ): Promise<MessagingTarget | undefined> {
   const trimmed = raw.trim();
   if (!trimmed) return undefined;
 
+<<<<<<< HEAD
   // If already a known format, parse directly
   const directParse = parseDiscordTarget(trimmed);
   if (directParse && directParse.kind !== "channel" && !isLikelyUsername(trimmed)) {
+=======
+  const likelyUsername = isLikelyUsername(trimmed);
+  const shouldLookup = isExplicitUserLookup(trimmed, parseOptions) || likelyUsername;
+  const directParse = safeParseDiscordTarget(trimmed, parseOptions);
+  if (directParse && directParse.kind !== "channel" && !likelyUsername) {
+>>>>>>> 9688454a30e618e878ca795fbe46da58b2e2e9d3
     return directParse;
+  }
+  if (!shouldLookup) {
+    return directParse ?? parseDiscordTarget(trimmed, parseOptions);
   }
 
   // Try to resolve as a username via directory lookup
@@ -102,13 +116,44 @@ export async function resolveDiscordTarget(
       const userId = match.id.replace(/^user:/, "");
       return buildMessagingTarget("user", userId, trimmed);
     }
-  } catch (error) {
+  } catch {
     // Directory lookup failed - fall through to parse as-is
     // This preserves existing behavior for channel names
   }
 
   // Fallback to original parsing (for channels, etc.)
+<<<<<<< HEAD
   return parseDiscordTarget(trimmed);
+=======
+  return parseDiscordTarget(trimmed, parseOptions);
+}
+
+function safeParseDiscordTarget(
+  input: string,
+  options: DiscordTargetParseOptions,
+): MessagingTarget | undefined {
+  try {
+    return parseDiscordTarget(input, options);
+  } catch {
+    return undefined;
+  }
+}
+
+function isExplicitUserLookup(input: string, options: DiscordTargetParseOptions): boolean {
+  if (/^<@!?(\d+)>$/.test(input)) {
+    return true;
+  }
+  if (/^(user:|discord:)/.test(input)) {
+    return true;
+  }
+  if (input.startsWith("@")) {
+    return true;
+  }
+  if (/^\d+$/.test(input)) {
+    return options.defaultKind === "user";
+  }
+  return false;
+>>>>>>> 9688454a30e618e878ca795fbe46da58b2e2e9d3
 }
 
 /**
